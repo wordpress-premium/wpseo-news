@@ -1,5 +1,5 @@
 {
-    "name": "thaikolja/yoast-seo-news",
+    "name": "wordpress-premium/yoast-seo-news",
 	"description": "Google News plugin for the Yoast SEO plugin",
     "type": "wordpress-plugin",
 	"version": "11.6",
