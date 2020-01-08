@@ -4,26 +4,11 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit216ea60c03399a9f3a4a2e5ca64aef3a
+class ComposerStaticInita9baf088c199b5dd1ef744b71c95f03c
 {
-    public static $files = array (
-        '23846a2512770688e91c6220c735f257' => __DIR__ . '/..' . '/yoast/wp-helpscout/src/functions.php',
-    );
-
-    public static $prefixesPsr0 = array (
-        'x' => 
-        array (
-            'xrstf\\Composer52' => 
-            array (
-                0 => __DIR__ . '/..' . '/xrstf/composer-php52/lib',
-            ),
-        ),
-    );
-
     public static $classMap = array (
         'WPSEO_News' => __DIR__ . '/../..' . '/classes/wpseo-news.php',
         'WPSEO_News_Admin_Page' => __DIR__ . '/../..' . '/classes/admin-page.php',
-        'WPSEO_News_Beacon_Setting' => __DIR__ . '/../..' . '/classes/beacon-setting.php',
         'WPSEO_News_Excludable_Taxonomies' => __DIR__ . '/../..' . '/classes/excludable-taxonomies.php',
         'WPSEO_News_Head' => __DIR__ . '/../..' . '/classes/head.php',
         'WPSEO_News_Javascript_Strings' => __DIR__ . '/../..' . '/classes/javascript-strings.php',
@@ -35,21 +20,14 @@ class ComposerStaticInit216ea60c03399a9f3a4a2e5ca64aef3a
         'WPSEO_News_Sitemap_Item' => __DIR__ . '/../..' . '/classes/sitemap-item.php',
         'WPSEO_News_Sitemap_Timezone' => __DIR__ . '/../..' . '/classes/sitemap-timezone.php',
         'WPSEO_News_Upgrade_Manager' => __DIR__ . '/../..' . '/classes/upgrade-manager.php',
-        'WPSEO_News_Wrappers' => __DIR__ . '/../..' . '/classes/wrappers.php',
-        'Yoast_HelpScout_Beacon' => __DIR__ . '/..' . '/yoast/wp-helpscout/src/class-helpscout-beacon.php',
-        'Yoast_HelpScout_Beacon_Identifier' => __DIR__ . '/..' . '/yoast/wp-helpscout/src/class-helpscout-beacon-identifier.php',
-        'Yoast_HelpScout_Beacon_Setting' => __DIR__ . '/..' . '/yoast/wp-helpscout/src/interface-helpscout-beacon-setting.php',
         'Yoast_I18n_WordPressOrg_v3' => __DIR__ . '/..' . '/yoast/i18n-module/src/i18n-wordpressorg-v3.php',
         'Yoast_I18n_v3' => __DIR__ . '/..' . '/yoast/i18n-module/src/i18n-v3.php',
-        'xrstf\\Composer52\\AutoloadGenerator' => __DIR__ . '/..' . '/xrstf/composer-php52/lib/xrstf/Composer52/AutoloadGenerator.php',
-        'xrstf\\Composer52\\Generator' => __DIR__ . '/..' . '/xrstf/composer-php52/lib/xrstf/Composer52/Generator.php',
     );
 
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixesPsr0 = ComposerStaticInit216ea60c03399a9f3a4a2e5ca64aef3a::$prefixesPsr0;
-            $loader->classMap = ComposerStaticInit216ea60c03399a9f3a4a2e5ca64aef3a::$classMap;
+            $loader->classMap = ComposerStaticInita9baf088c199b5dd1ef744b71c95f03c::$classMap;
 
         }, null, ClassLoader::class);
     }

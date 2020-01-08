@@ -8,7 +8,6 @@ $baseDir = dirname($vendorDir);
 return array(
     'WPSEO_News' => $baseDir . '/classes/wpseo-news.php',
     'WPSEO_News_Admin_Page' => $baseDir . '/classes/admin-page.php',
-    'WPSEO_News_Beacon_Setting' => $baseDir . '/classes/beacon-setting.php',
     'WPSEO_News_Excludable_Taxonomies' => $baseDir . '/classes/excludable-taxonomies.php',
     'WPSEO_News_Head' => $baseDir . '/classes/head.php',
     'WPSEO_News_Javascript_Strings' => $baseDir . '/classes/javascript-strings.php',
@@ -20,12 +19,6 @@ return array(
     'WPSEO_News_Sitemap_Item' => $baseDir . '/classes/sitemap-item.php',
     'WPSEO_News_Sitemap_Timezone' => $baseDir . '/classes/sitemap-timezone.php',
     'WPSEO_News_Upgrade_Manager' => $baseDir . '/classes/upgrade-manager.php',
-    'WPSEO_News_Wrappers' => $baseDir . '/classes/wrappers.php',
-    'Yoast_HelpScout_Beacon' => $vendorDir . '/yoast/wp-helpscout/src/class-helpscout-beacon.php',
-    'Yoast_HelpScout_Beacon_Identifier' => $vendorDir . '/yoast/wp-helpscout/src/class-helpscout-beacon-identifier.php',
-    'Yoast_HelpScout_Beacon_Setting' => $vendorDir . '/yoast/wp-helpscout/src/interface-helpscout-beacon-setting.php',
     'Yoast_I18n_WordPressOrg_v3' => $vendorDir . '/yoast/i18n-module/src/i18n-wordpressorg-v3.php',
     'Yoast_I18n_v3' => $vendorDir . '/yoast/i18n-module/src/i18n-v3.php',
-    'xrstf\\Composer52\\AutoloadGenerator' => $vendorDir . '/xrstf/composer-php52/lib/xrstf/Composer52/AutoloadGenerator.php',
-    'xrstf\\Composer52\\Generator' => $vendorDir . '/xrstf/composer-php52/lib/xrstf/Composer52/Generator.php',
 );

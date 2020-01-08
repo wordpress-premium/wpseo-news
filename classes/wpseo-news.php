@@ -66,19 +66,13 @@ class WPSEO_News {
 	 * Loading the hooks, which will be lead to methods withing this class.
 	 */
 	private function set_hooks() {
-		// Add plugin links.
 		add_filter( 'plugin_action_links', array( $this, 'plugin_links' ), 10, 2 );
-
-		// Add subitem to menu.
 		add_filter( 'wpseo_submenu_pages', array( $this, 'add_submenu_pages' ) );
-
-		// Register settings.
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
+		add_action( 'admin_init', array( $this, 'init_helpscout_beacon' ) );
 
-		// Only initialize Helpscout Beacon when the License Manager is present.
-		if ( class_exists( 'Yoast_Plugin_License_Manager' ) ) {
-			add_action( 'admin_init', array( $this, 'init_helpscout_beacon' ) );
-		}
+		// Enable Yoast usage tracking.
+		add_filter( 'wpseo_enable_tracking', '__return_true' );
 	}
 
 	/**
@@ -98,6 +92,8 @@ class WPSEO_News {
 				WPSEO_News_Sitemap::get_sitemap_name( false )
 			);
 		}
+
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 	}
 
 	/**
@@ -109,7 +105,7 @@ class WPSEO_News {
 	 */
 	protected function check_dependencies( $wp_version ) {
 		// When WordPress function is too low.
-		if ( version_compare( $wp_version, '4.9', '<' ) ) {
+		if ( version_compare( $wp_version, '5.2', '<' ) ) {
 			add_action( 'all_admin_notices', array( $this, 'error_upgrade_wp' ) );
 
 			return false;
@@ -124,8 +120,8 @@ class WPSEO_News {
 			return false;
 		}
 
-		// Make sure the Yoast SEO version is least 10.2. In that version we introduced new functionality.
-		if ( version_compare( $wordpress_seo_version, '10.2-RC0', '<' ) ) {
+		// At least 12.6.1, in which we implemented the new HelpScout Beacon.
+		if ( version_compare( $wordpress_seo_version, '12.6.1-RC0', '<' ) ) {
 			add_action( 'all_admin_notices', array( $this, 'error_upgrade_wpseo' ) );
 
 			return false;
@@ -161,9 +157,11 @@ class WPSEO_News {
 			$this_plugin = plugin_basename( WPSEO_NEWS_FILE );
 		}
 		if ( $file === $this_plugin ) {
-			$settings_link = '<a href="' . admin_url( 'admin.php?page=wpseo_news' ) . '">'
-				. __( 'Settings', 'wordpress-seo-news' )
-				. '</a>';
+			$settings_link = sprintf(
+				'<a href="%1$s">%2$s</a>',
+				admin_url( 'admin.php?page=wpseo_news' ),
+				__( 'Settings', 'wordpress-seo-news' )
+			);
 			array_unshift( $links, $settings_link );
 		}
 
@@ -212,6 +210,32 @@ class WPSEO_News {
 		);
 
 		return $submenu_pages;
+	}
+
+	/**
+	 * Flattens a version number for use in a filename.
+	 *
+	 * @param string $version The original version number.
+	 *
+	 * @return string The flattened version number.
+	 */
+	public function flatten_version( $version ) {
+		$parts = explode( '.', $version );
+		if ( count( $parts ) === 2 && preg_match( '/^\d+$/', $parts[1] ) === 1 ) {
+			$parts[] = '0';
+		}
+		return implode( '', $parts );
+	}
+
+	/**
+	 * Enqueues the plugin scripts.
+	 */
+	public function enqueue_scripts() {
+		global $pagenow;
+
+		if ( $pagenow === 'post.php' || $pagenow === 'post-new.php' ) {
+			wp_enqueue_style( 'wpseo-news-admin-metabox-css', plugins_url( 'css/dist/admin-metabox-' . $this->flatten_version( WPSEO_NEWS_VERSION ) . WPSEO_CSSJS_SUFFIX . '.css', WPSEO_NEWS_FILE ), array(), WPSEO_NEWS_VERSION );
+		}
 	}
 
 	/**
@@ -294,15 +318,17 @@ class WPSEO_News {
 	 * Initializes the helpscout beacon.
 	 */
 	public function init_helpscout_beacon() {
-		$page      = filter_input( INPUT_GET, 'page' );
-		$query_var = ( ! empty( $page ) ) ? $page : '';
-
-		// Only add the helpscout beacon on Yoast SEO pages.
-		if ( $query_var === 'wpseo_news' ) {
-			$beacon = yoast_get_helpscout_beacon( $query_var );
-			$beacon->add_setting( new WPSEO_News_Beacon_Setting() );
-			$beacon->register_hooks();
+		if ( ! class_exists( 'WPSEO_HelpScout' ) ) {
+			return;
 		}
+
+		$helpscout = new WPSEO_HelpScout(
+			'161a6b32-9360-4613-bd04-d8098b283a0f',
+			[ 'wpseo_news' ],
+			[ WPSEO_Addon_Manager::NEWS_SLUG ]
+		);
+
+		$helpscout->register_hooks();
 	}
 
 	/**
@@ -351,5 +377,64 @@ class WPSEO_News {
 			'opinion'       => __( 'Opinion', 'wordpress-seo-news' ),
 			'usergenerated' => __( 'User Generated', 'wordpress-seo-news' ),
 		);
+	}
+
+	/**
+	 * Determines whether the post is excluded in the news sitemap (and therefore schema) output.
+	 *
+	 * @param int $post_id The ID of the post to check for.
+	 *
+	 * @return bool Whether or not the post is excluded.
+	 */
+	public static function is_excluded_through_sitemap( $post_id ) {
+		return WPSEO_Meta::get_value( 'newssitemap-exclude', $post_id ) === 'on';
+	}
+
+	/**
+	 * Determines if the post is excluded in through a term that is excluded.
+	 *
+	 * @param int    $post_id   The ID of the post.
+	 * @param string $post_type The type of the post.
+	 *
+	 * @return bool True if the post is excluded.
+	 */
+	public static function is_excluded_through_terms( $post_id, $post_type ) {
+		$options = self::get_options();
+		$terms   = self::get_terms_for_post( $post_id, $post_type );
+
+		foreach ( $terms as $term ) {
+			$term_exclude_option = 'term_exclude_' . $term->taxonomy . '_' . $term->slug . '_for_' . $post_type;
+
+			if ( isset( $options[ $term_exclude_option ] ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Retrieves all the term IDs for the post.
+	 *
+	 * @param int    $post_id   The ID of the post.
+	 * @param string $post_type The type of the post.
+	 *
+	 * @return array The terms for the item.
+	 */
+	public static function get_terms_for_post( $post_id, $post_type ) {
+		$terms                 = array();
+		$excludable_taxonomies = new WPSEO_News_Excludable_Taxonomies( $post_type );
+
+		foreach ( $excludable_taxonomies->get() as $taxonomy ) {
+			$extra_terms = get_the_terms( $post_id, $taxonomy->name );
+
+			if ( ! is_array( $extra_terms ) || count( $extra_terms ) === 0 ) {
+				continue;
+			}
+
+			$terms = array_merge( $terms, $extra_terms );
+		}
+
+		return $terms;
 	}
 }

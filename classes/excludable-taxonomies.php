@@ -9,6 +9,7 @@
  * Class representing the excludable taxonomies for a certain post type.
  */
 class WPSEO_News_Excludable_Taxonomies {
+
 	/**
 	 * The post type.
 	 *
@@ -37,7 +38,7 @@ class WPSEO_News_Excludable_Taxonomies {
 	}
 
 	/**
-	 * Filter to check whether a taxonomy is shows in the WordPress ui.
+	 * Filter to check whether a taxonomy is shown in the WordPress ui.
 	 *
 	 * @param WP_Taxonomy $taxonomy The taxonomy to filter.
 	 *
