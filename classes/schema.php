@@ -5,6 +5,8 @@
  * @package WPSEO_News
  */
 
+use Yoast\WP\SEO\Config\Schema_IDs;
+
 /**
  * Makes the require Schema changes.
  */
@@ -25,8 +27,9 @@ class WPSEO_News_Schema {
 	public function __construct() {
 		$this->date = new WPSEO_Date_Helper();
 
-		add_filter( 'wpseo_schema_article_post_types', array( $this, 'article_post_types' ) );
-		add_filter( 'wpseo_schema_article', array( $this, 'change_article' ) );
+		add_filter( 'wpseo_schema_article_post_types', [ $this, 'article_post_types' ] );
+		add_filter( 'wpseo_schema_article_type', [ $this, 'add_news_article_type' ] );
+		add_filter( 'wpseo_schema_article', [ $this, 'add_copyright_information' ] );
 	}
 
 	/**
@@ -34,7 +37,7 @@ class WPSEO_News_Schema {
 	 *
 	 * @param array $post_types Supported post types.
 	 *
-	 * @return array $post_types Supported post types.
+	 * @return array Supported post types.
 	 */
 	public function article_post_types( $post_types ) {
 		$post = $this->get_post();
@@ -47,35 +50,81 @@ class WPSEO_News_Schema {
 	}
 
 	/**
-	 * Change Article to NewsArticle.
+	 * Adds the NewsArticle type.
+	 *
+	 * @param array|string $type Schema Article type.
+	 *
+	 * @return array Schema Article type.
+	 */
+	public function add_news_article_type( $type ) {
+		$post = $this->get_post();
+
+		if ( ! $this->is_post_type_included( $post ) ) {
+			return $type;
+		}
+		if ( $this->is_post_excluded( $post ) ) {
+			return $type;
+		}
+
+		// Make sure that we are dealing with an array of types.
+		if ( ! is_array( $type ) ) {
+			$type = [ $type ];
+		}
+
+		/*
+		 * Replace `None` with `Article` if included.
+		 * This is to keep it consistent with post types that already include an Article.
+		 */
+		$type = array_map(
+			function ( $value ) {
+				return ( $value === 'None' ) ? 'Article' : $value;
+			},
+			$type
+		);
+
+		$type[] = 'NewsArticle';
+
+		return $type;
+	}
+
+	/**
+	 * Adds copyright information.
 	 *
 	 * @param array $data Schema Article data.
 	 *
-	 * @return array $data Schema Article data.
+	 * @return array Schema Article data.
 	 */
-	public function change_article( $data ) {
+	public function add_copyright_information( $data ) {
 		$post = $this->get_post();
-		if ( $post !== null && in_array( $post->post_type, WPSEO_News::get_included_post_types(), true ) ) {
-			// Change the `@type` to `NewsArticle` only when the news article is not excluded.
-			if ( ! $this->is_post_excluded( $post ) ) {
-				$data['@type'] = 'NewsArticle';
-			}
-
+		if ( $this->is_post_type_included( $post ) ) {
 			$data['copyrightYear']   = $this->date->format( $post->post_date_gmt, 'Y' );
-			$data['copyrightHolder'] = array( '@id' => trailingslashit( WPSEO_Utils::get_home_url() ) . WPSEO_Schema_IDs::ORGANIZATION_HASH );
+			$data['copyrightHolder'] = [ '@id' => trailingslashit( WPSEO_Utils::get_home_url() ) . Schema_IDs::ORGANIZATION_HASH ];
 		}
 
 		return $data;
 	}
 
 	/**
+	 * Checks if the given post should be included or not, based on the type.
+	 *
+	 * @param WP_Post|null $post The post to check for.
+	 *
+	 * @return bool True if the post should be included based on post type.
+	 */
+	protected function is_post_type_included( $post ) {
+		return $post !== null && in_array( $post->post_type, WPSEO_News::get_included_post_types(), true );
+	}
+
+	/**
 	 * Checks if the given post should be excluded or not.
+	 *
+	 * @codeCoverageIgnore It just wraps logic.
 	 *
 	 * @param WP_Post $post The post to check for.
 	 *
 	 * @return bool True if the post should be excluded.
 	 */
-	private function is_post_excluded( $post ) {
+	protected function is_post_excluded( $post ) {
 		return (
 			WPSEO_News::is_excluded_through_sitemap( $post->ID )
 			|| WPSEO_News::is_excluded_through_terms( $post->ID, $post->post_type )

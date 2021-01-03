@@ -6,12 +6,12 @@
  *
  * @wordpress-plugin
  * Plugin Name: Yoast SEO: News
- * Version:     12.3
+ * Version:     12.6
  * Plugin URI:  https://yoast.com/wordpress/plugins/news-seo/#utm_source=wpadmin&utm_medium=plugin&utm_campaign=wpseonewsplugin
  * Description: Google News plugin for the Yoast SEO plugin
  * Author:      Team Yoast
  * Author URI:  http://yoast.com/
- * Text Domain: wpseo_news
+ * Text Domain: wordpress-seo-news
  * Domain Path: /languages/
  * Depends:     Yoast SEO
  * License:     GPL v3
@@ -37,10 +37,10 @@ if ( ! defined( 'WPSEO_NEWS_FILE' ) ) {
 	define( 'WPSEO_NEWS_FILE', __FILE__ );
 }
 
-define( 'WPSEO_NEWS_VERSION', '12.3' );
+define( 'WPSEO_NEWS_VERSION', '12.6' );
 
-if ( file_exists( dirname( __FILE__ ) . '/vendor/autoload.php' ) ) {
-	require dirname( __FILE__ ) . '/vendor/autoload.php';
+if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
+	require __DIR__ . '/vendor/autoload.php';
 }
 
 
@@ -54,11 +54,13 @@ add_action( 'init', 'wpseo_news_load_textdomain' );
 
 /**
  * Load Yoast SEO: News.
+ *
+ * @phpcs:disable PHPCompatibility.FunctionNameRestrictions.ReservedFunctionNames.FunctionDoubleUnderscore,WordPress.NamingConventions.ValidFunctionName.FunctionDoubleUnderscore,WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Function name change would be BC-break.
  */
-// @codingStandardsIgnoreLine
 function __wpseo_news_main() {
 	new WPSEO_News();
 }
+// phpcs:enable
 add_action( 'plugins_loaded', '__wpseo_news_main' );
 
 /**
@@ -66,7 +68,7 @@ add_action( 'plugins_loaded', '__wpseo_news_main' );
  */
 function yoast_wpseo_news_clear_sitemap_cache() {
 	if ( class_exists( 'WPSEO_Sitemaps_Cache' ) && method_exists( 'WPSEO_Sitemaps_Cache', 'clear' ) ) {
-		WPSEO_Sitemaps_Cache::clear( array( WPSEO_News_Sitemap::get_sitemap_name() ) );
+		WPSEO_Sitemaps_Cache::clear( [ WPSEO_News_Sitemap::get_sitemap_name() ] );
 	}
 }
 
@@ -74,6 +76,11 @@ function yoast_wpseo_news_clear_sitemap_cache() {
  * Clear the news sitemap when we activate the plugin.
  */
 function yoast_wpseo_news_activate() {
+	// Enable tracking.
+	if ( class_exists( 'WPSEO_Options' ) && method_exists( 'WPSEO_Options', 'set' ) ) {
+		WPSEO_Options::set( 'tracking', true );
+	}
+
 	yoast_wpseo_news_clear_sitemap_cache();
 }
 

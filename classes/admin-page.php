@@ -11,24 +11,12 @@
 class WPSEO_News_Admin_Page {
 
 	/**
-	 * Options.
-	 *
-	 * @var array
-	 */
-	private $options = array();
-
-	/**
 	 * Constructor.
 	 */
 	public function __construct() {
-		$this->options = WPSEO_News::get_options();
-
 		if ( $this->is_news_page( filter_input( INPUT_GET, 'page' ) ) ) {
 			$this->register_i18n_promo_class();
 		}
-
-		// When the timezone is an empty string.
-		$this->add_timezone_notice();
 	}
 
 	/**
@@ -36,7 +24,7 @@ class WPSEO_News_Admin_Page {
 	 */
 	public function display() {
 		// Admin header.
-		Yoast_Form::get_instance()->admin_header( true, 'wpseo_news', false, 'yoast_wpseo_news_options' );
+		Yoast_Form::get_instance()->admin_header( true, 'wpseo_news' );
 
 		// Introduction.
 		echo '<p>' . esc_html__( 'You will generally only need a News Sitemap when your website is included in Google News.', 'wordpress-seo-news' ) . '</p>';
@@ -54,11 +42,11 @@ class WPSEO_News_Admin_Page {
 		echo '<fieldset><legend class="screen-reader-text">' . esc_html__( 'News Sitemap settings', 'wordpress-seo-news' ) . '</legend>';
 
 		// Google News Publication Name.
-		Yoast_Form::get_instance()->textinput( 'name', __( 'Google News Publication Name', 'wordpress-seo-news' ) );
+		Yoast_Form::get_instance()->textinput( 'news_sitemap_name', __( 'Google News Publication Name', 'wordpress-seo-news' ) );
 
 		// Default Genre.
 		Yoast_Form::get_instance()->select(
-			'default_genre',
+			'news_sitemap_default_genre',
 			__( 'Default Genre', 'wordpress-seo-news' ),
 			WPSEO_News::list_genres()
 		);
@@ -82,7 +70,7 @@ class WPSEO_News_Admin_Page {
 	 */
 	protected function register_i18n_promo_class() {
 		new Yoast_I18n_v3(
-			array(
+			[
 				'textdomain'     => 'wordpress_seo_news',
 				'project_slug'   => 'news-seo',
 				'plugin_name'    => 'WordPress SEO News',
@@ -91,7 +79,7 @@ class WPSEO_News_Admin_Page {
 				'glotpress_name' => 'Yoast Translate',
 				'glotpress_logo' => 'http://translate.yoast.com/gp-templates/images/Yoast_Translate.svg',
 				'register_url'   => 'http://translate.yoast.com/gp/projects#utm_source=plugin&utm_medium=promo-box&utm_campaign=wpseo-news-i18n-promo',
-			)
+			]
 		);
 	}
 
@@ -103,9 +91,13 @@ class WPSEO_News_Admin_Page {
 		echo '<h2>' . esc_html__( 'Post Types to include in News Sitemap', 'wordpress-seo-news' ) . '</h2>';
 		echo '<fieldset><legend class="screen-reader-text">' . esc_html__( 'Post Types to include:', 'wordpress-seo-news' ) . '</legend>';
 
-		foreach ( get_post_types( array( 'public' => true ), 'objects' ) as $posttype ) {
-			Yoast_Form::get_instance()->checkbox( 'newssitemap_include_' . $posttype->name, $posttype->labels->name . ' (<code>' . $posttype->name . '</code>)', false );
+		$post_types      = get_post_types( [ 'public' => true ], 'objects' );
+		$post_types_list = [];
+		foreach ( $post_types as $post_type ) {
+			$post_types_list[ $post_type->name ] = $post_type->labels->name . ' (' . $post_type->name . ')';
 		}
+
+		Yoast_Form::get_instance()->checkbox_list( 'news_sitemap_include_post_types', $post_types_list );
 
 		echo '</fieldset><br>';
 	}
@@ -116,10 +108,10 @@ class WPSEO_News_Admin_Page {
 	 * @return void
 	 */
 	private function excluded_post_type_taxonomies() {
-		$post_types = get_post_types( array( 'public' => true ), 'objects' );
-		$post_types = array_filter( $post_types, array( $this, 'filter_included_post_type' ) );
+		$post_types = get_post_types( [ 'public' => true ], 'objects' );
+		$post_types = array_filter( $post_types, [ $this, 'filter_included_post_type' ] );
 
-		array_walk( $post_types, array( $this, 'excluded_post_type_taxonomies_output' ) );
+		array_walk( $post_types, [ $this, 'excluded_post_type_taxonomies_output' ] );
 	}
 
 	/**
@@ -130,9 +122,12 @@ class WPSEO_News_Admin_Page {
 	 * @return bool Whether or not the post type should be included in the sitemap.
 	 */
 	protected function filter_included_post_type( $post_type ) {
-		$option_key = 'newssitemap_include_' . $post_type->name;
+		static $included_post_types;
+		if ( ! $included_post_types ) {
+			$included_post_types = (array) WPSEO_Options::get( 'news_sitemap_include_post_types', [] );
+		}
 
-		return isset( $this->options[ $option_key ] ) && $this->options[ $option_key ] === 'on';
+		return array_key_exists( $post_type->name, $included_post_types );
 	}
 
 	/**
@@ -146,35 +141,7 @@ class WPSEO_News_Admin_Page {
 	private function get_excluded_post_type_taxonomies( $post_type ) {
 		$excludable_taxonomies = new WPSEO_News_Excludable_Taxonomies( $post_type->name );
 
-		$taxonomy_terms = array_map( array( $this, 'get_terms_for_taxonomy' ), $excludable_taxonomies->get() );
-
-		return array_filter( $taxonomy_terms );
-	}
-
-	/**
-	 * Gets a list of terms for the given taxonomy, and returns them along with the taxonomy in an array.
-	 *
-	 * @param WP_Taxonomy $taxonomy The taxonomy to get the terms for.
-	 *
-	 * @return array An array containing both the taxonomy and its terms.
-	 */
-	protected function get_terms_for_taxonomy( WP_Taxonomy $taxonomy ) {
-		$terms = get_terms(
-			array(
-				'taxonomy'   => $taxonomy->name,
-				'hide_empty' => false,
-				'show_ui'    => true,
-			)
-		);
-
-		if ( count( $terms ) === 0 ) {
-			return null;
-		}
-
-		return array(
-			'taxonomy' => $taxonomy,
-			'terms'    => $terms,
-		);
+		return $excludable_taxonomies->get_terms();
 	}
 
 	/**
@@ -187,7 +154,7 @@ class WPSEO_News_Admin_Page {
 	private function excluded_post_type_taxonomies_output( $post_type ) {
 		$terms_per_taxonomy = $this->get_excluded_post_type_taxonomies( $post_type );
 
-		if ( $terms_per_taxonomy === array() ) {
+		if ( $terms_per_taxonomy === [] ) {
 			return;
 		}
 
@@ -201,14 +168,12 @@ class WPSEO_News_Admin_Page {
 			/* translators: %1%s expands to the taxonomy name name. */
 			echo '<h3>' . esc_html( sprintf( __( '%1$s to exclude', 'wordpress-seo-news' ), $taxonomy->labels->name ) ) . '</h3>';
 
+			$taxonomies_list = [];
 			foreach ( $terms as $term ) {
-
-				Yoast_Form::get_instance()->checkbox(
-					'term_exclude_' . $term->taxonomy . '_' . $term->slug . '_for_' . $post_type->name,
-					$term->name,
-					false
-				);
+				$taxonomies_list[ $term->taxonomy . '_' . $term->slug . '_for_' . $post_type->name ] = $term->name;
 			}
+
+			Yoast_Form::get_instance()->checkbox_list( 'news_sitemap_exclude_terms', $taxonomies_list );
 		}
 	}
 
@@ -220,40 +185,8 @@ class WPSEO_News_Admin_Page {
 	 * @return bool True when currently on a new page.
 	 */
 	protected function is_news_page( $page ) {
-		$news_pages = array( 'wpseo_news' );
+		$news_pages = [ 'wpseo_news' ];
 
 		return in_array( $page, $news_pages, true );
-	}
-
-	/**
-	 * Shows a notice when the timezone is in UTC format.
-	 */
-	private function add_timezone_notice() {
-		if ( ! class_exists( 'Yoast_Notification_Center' ) ) {
-			return;
-		}
-
-		$notification_message = sprintf(
-			/* translators: %1$s resolves to the opening tag of the link to the general settings page, %1$s resolves to the closing tag for the link */
-			__( 'Your timezone settings should reflect your real timezone, not a UTC offset, please change this on the %1$sGeneral Settings page%2$s.', 'wordpress-seo-news' ),
-			'<a href="' . esc_url( admin_url( 'options-general.php' ) ) . '">',
-			'</a>'
-		);
-
-		$notification_options = array(
-			'type'         => Yoast_Notification::ERROR,
-			'id'           => 'wpseo-news_timezone_format_empty',
-		);
-
-		$timezone_notification = new Yoast_Notification( $notification_message, $notification_options );
-
-		$notification_center = Yoast_Notification_Center::get();
-
-		if ( get_option( 'timezone_string' ) === '' ) {
-			$notification_center->add_notification( $timezone_notification );
-		}
-		else {
-			$notification_center->remove_notification( $timezone_notification );
-		}
 	}
 }

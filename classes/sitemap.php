@@ -11,11 +11,11 @@
 class WPSEO_News_Sitemap {
 
 	/**
-	 * Options.
+	 * The date helper.
 	 *
-	 * @var array
+	 * @var WPSEO_Date_Helper
 	 */
-	private $options;
+	protected $date;
 
 	/**
 	 * The sitemap basename.
@@ -28,11 +28,11 @@ class WPSEO_News_Sitemap {
 	 * Constructor. Set options, basename and add actions.
 	 */
 	public function __construct() {
-		$this->options = WPSEO_News::get_options();
+		$this->date = new WPSEO_Date_Helper();
 
-		add_action( 'init', array( $this, 'init' ), 10 );
+		add_action( 'init', [ $this, 'init' ], 10 );
 
-		add_action( 'save_post', array( $this, 'invalidate_sitemap' ) );
+		add_action( 'save_post', [ $this, 'invalidate_sitemap' ] );
 
 		add_action( 'wpseo_news_schedule_sitemap_clear', 'yoast_wpseo_news_clear_sitemap_cache' );
 	}
@@ -52,11 +52,9 @@ class WPSEO_News_Sitemap {
 			return $str;
 		}
 
-		$date = new DateTime( get_lastpostdate( 'gmt' ), new DateTimeZone( 'UTC' ) );
-
 		$str .= '<sitemap>' . "\n";
 		$str .= '<loc>' . self::get_sitemap_name() . '</loc>' . "\n";
-		$str .= '<lastmod>' . htmlspecialchars( $date->format( 'c' ), ENT_COMPAT, get_bloginfo( 'charset' ), false ) . '</lastmod>' . "\n";
+		$str .= '<lastmod>' . htmlspecialchars( $this->date->format( get_lastpostdate( 'gmt' ) ), ENT_COMPAT, get_bloginfo( 'charset' ), false ) . '</lastmod>' . "\n";
 		$str .= '</sitemap>' . "\n";
 
 		return $str;
@@ -70,19 +68,19 @@ class WPSEO_News_Sitemap {
 		$this->basename = self::get_sitemap_name( false );
 
 		// Setting stylesheet for cached sitemap.
-		add_action( 'wpseo_sitemap_stylesheet_cache_' . $this->basename, array( $this, 'set_stylesheet_cache' ) );
+		add_action( 'wpseo_sitemap_stylesheet_cache_' . $this->basename, [ $this, 'set_stylesheet_cache' ] );
 
 		if ( isset( $GLOBALS['wpseo_sitemaps'] ) ) {
-			add_filter( 'wpseo_sitemap_index', array( $this, 'add_to_index' ) );
+			add_filter( 'wpseo_sitemap_index', [ $this, 'add_to_index' ] );
 
 			$this->yoast_wpseo_news_schedule_clear();
 
 			// We might consider deprecating/removing this, because we are using a static xsl file.
-			$GLOBALS['wpseo_sitemaps']->register_sitemap( $this->basename, array( $this, 'build' ) );
+			$GLOBALS['wpseo_sitemaps']->register_sitemap( $this->basename, [ $this, 'build' ] );
 			if ( method_exists( $GLOBALS['wpseo_sitemaps'], 'register_xsl' ) ) {
 				$xsl_rewrite_rule = sprintf( '^%s-sitemap.xsl$', $this->basename );
 
-				$GLOBALS['wpseo_sitemaps']->register_xsl( $this->basename, array( $this, 'build_news_sitemap_xsl' ), $xsl_rewrite_rule );
+				$GLOBALS['wpseo_sitemaps']->register_xsl( $this->basename, [ $this, 'build_news_sitemap_xsl' ], $xsl_rewrite_rule );
 			}
 		}
 	}
@@ -90,11 +88,16 @@ class WPSEO_News_Sitemap {
 	/**
 	 * Method to invalidate the sitemap.
 	 *
-	 * @param integer $post_id Post ID to invalidate for.
+	 * @param int $post_id Post ID to invalidate for.
 	 */
 	public function invalidate_sitemap( $post_id ) {
 		// If this is just a revision, don't invalidate the sitemap cache yet.
 		if ( wp_is_post_revision( $post_id ) ) {
+			return;
+		}
+
+		// Bail if this is a multisite installation and the site has been switched.
+		if ( is_multisite() && ms_is_switched() ) {
 			return;
 		}
 
@@ -166,9 +169,16 @@ class WPSEO_News_Sitemap {
 		// Make the browser cache this file properly.
 		header( 'Pragma: public' );
 		header( 'Cache-Control: maxage=' . YEAR_IN_SECONDS );
-		header( 'Expires: ' . gmdate( 'D, d M Y H:i:s', ( time() + YEAR_IN_SECONDS ) ) . ' GMT' );
+		header( 'Expires: ' . $this->date->format_timestamp( ( time() + YEAR_IN_SECONDS ), 'D, d M Y H:i:s' ) . ' GMT' );
 
+		/*
+		 * Using `readfile()` rather than `include` to prevent issues with XSL being interpreted as PHP
+		 * on systems where the PHP ini directived `short_open_tags` is turned on.
+		 * phpcs:disable WordPress.WP.AlternativeFunctions.file_system_read_readfile
+		 */
 		readfile( dirname( WPSEO_NEWS_FILE ) . '/assets/xml-news-sitemap.xsl' );
+		// phpcs:enable
+
 		die();
 	}
 
@@ -186,14 +196,12 @@ class WPSEO_News_Sitemap {
 	}
 
 	/**
-	 * Getter for stylesheet url.
+	 * Getter for stylesheet URL.
 	 *
-	 * @return string
+	 * @return string Stylesheet URL.
 	 */
 	private function get_stylesheet_line() {
-		$stylesheet_url = "\n" . '<?xml-stylesheet type="text/xsl" href="' . esc_url( $this->get_xsl_url() ) . '"?>';
-
-		return $stylesheet_url;
+		return "\n" . '<?xml-stylesheet type="text/xsl" href="' . esc_url( $this->get_xsl_url() ) . '"?>';
 	}
 
 	/**
@@ -201,7 +209,7 @@ class WPSEO_News_Sitemap {
 	 *
 	 * @param int $limit The limit for the query, default is 1000 items.
 	 *
-	 * @return array|null|object
+	 * @return array|object|null
 	 */
 	private function get_items( $limit = 1000 ) {
 		global $wpdb;
@@ -210,7 +218,7 @@ class WPSEO_News_Sitemap {
 		$post_types = WPSEO_News::get_included_post_types();
 
 		if ( empty( $post_types ) ) {
-			return array();
+			return [];
 		}
 
 		$replacements   = $post_types;
@@ -239,12 +247,12 @@ class WPSEO_News_Sitemap {
 	 *
 	 * @param array $items Items to convert to sitemap output.
 	 *
-	 * @return string $output
+	 * @return string
 	 */
 	private function build_items( $items ) {
 		$output = '';
 		foreach ( $items as $item ) {
-			$output .= new WPSEO_News_Sitemap_Item( $item, $this->options );
+			$output .= new WPSEO_News_Sitemap_Item( $item );
 		}
 
 		return $output;
@@ -255,11 +263,31 @@ class WPSEO_News_Sitemap {
 	 *
 	 * @param bool $full_path Generate a full path.
 	 *
-	 * @return string mixed
+	 * @return string
 	 */
 	public static function get_sitemap_name( $full_path = true ) {
-		// This filter is documented in classes/sitemap.php.
-		$sitemap_name = apply_filters( 'wpseo_news_sitemap_name', self::news_sitemap_basename() );
+		/**
+		 * Allows for filtering the News sitemap name.
+		 *
+		 * @deprecated 12.5.0. Use the {@see 'Yoast\WP\News\sitemap_name'} filter instead.
+		 *
+		 * @param string $sitemap_name First portion of the news sitemap "file" name.
+		 */
+		$sitemap_name = apply_filters_deprecated(
+			'wpseo_news_sitemap_name',
+			[ self::news_sitemap_basename() ],
+			'YoastSEO News 12.5.0',
+			'Yoast\WP\News\sitemap_name'
+		);
+
+		/**
+		 * Allows for filtering the News sitemap name.
+		 *
+		 * @since 12.5.0
+		 *
+		 * @param string $sitemap_name First portion of the news sitemap "file" name.
+		 */
+		$sitemap_name = apply_filters( 'Yoast\WP\News\sitemap_name', $sitemap_name );
 
 		// When $full_path is true, it will generate a full path.
 		if ( $full_path ) {
@@ -276,7 +304,7 @@ class WPSEO_News_Sitemap {
 	 *
 	 * @since 3.1
 	 *
-	 * @return string $basename
+	 * @return string Basename for the news sitemap.
 	 */
 	public static function news_sitemap_basename() {
 		$basename = 'news';

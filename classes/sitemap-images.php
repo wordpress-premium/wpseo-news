@@ -25,13 +25,6 @@ class WPSEO_News_Sitemap_Images {
 	private $output = '';
 
 	/**
-	 * The options.
-	 *
-	 * @var array
-	 */
-	private $options;
-
-	/**
 	 * Storage for the images.
 	 *
 	 * @var array
@@ -42,11 +35,14 @@ class WPSEO_News_Sitemap_Images {
 	 * Setting properties and build the item.
 	 *
 	 * @param object $item    News post object.
-	 * @param array  $options The options.
+	 * @param null   $options Deprecated. The options.
 	 */
-	public function __construct( $item, $options ) {
-		$this->item    = $item;
-		$this->options = $options;
+	public function __construct( $item, $options = null ) {
+		if ( $options !== null ) {
+			_deprecated_argument( __METHOD__, 'WPSEO News: 12.4', 'The options argument is deprecated' );
+		}
+
+		$this->item = $item;
 
 		$this->parse_item_images();
 	}
@@ -77,14 +73,13 @@ class WPSEO_News_Sitemap_Images {
 	 * Getting the images for the given $item.
 	 */
 	private function get_item_images() {
-		$restrict_sitemap_featured_img = isset( $this->options['restrict_sitemap_featured_img'] ) ? $this->options['restrict_sitemap_featured_img'] : false;
-		if ( ! $restrict_sitemap_featured_img && preg_match_all( '/<img [^>]+>/', $this->item->post_content, $matches ) ) {
+		if ( preg_match_all( '/<img [^>]+>/', $this->item->post_content, $matches ) ) {
 			$this->get_images_from_content( $matches );
 		}
 
 		// Also check if the featured image value is set.
 		$post_thumbnail_id = get_post_thumbnail_id( $this->item->ID );
-		if ( '' !== $post_thumbnail_id ) {
+		if ( $post_thumbnail_id !== '' ) {
 			$this->get_item_featured_image( $post_thumbnail_id );
 		}
 	}
@@ -112,7 +107,7 @@ class WPSEO_News_Sitemap_Images {
 	 *
 	 * @param string $src Image Source.
 	 *
-	 * @return string|void
+	 * @return string|null
 	 */
 	private function parse_image_source( $src ) {
 
@@ -142,16 +137,16 @@ class WPSEO_News_Sitemap_Images {
 	 *
 	 * @param string $img Image HTML.
 	 *
-	 * @return array
+	 * @return string[]
 	 */
 	private function parse_image( $img ) {
-		$image = array();
+		$image = [];
 		if ( preg_match( '/title=("|\')([^"\']+)("|\')/', $img, $match ) ) {
-			$image['title'] = str_replace( array( '-', '_' ), ' ', $match[2] );
+			$image['title'] = str_replace( [ '-', '_' ], ' ', $match[2] );
 		}
 
 		if ( preg_match( '/alt=("|\')([^"\']+)("|\')/', $img, $match ) ) {
-			$image['alt'] = str_replace( array( '-', '_' ), ' ', $match[2] );
+			$image['alt'] = str_replace( [ '-', '_' ], ' ', $match[2] );
 		}
 
 		return $image;
@@ -173,7 +168,7 @@ class WPSEO_News_Sitemap_Images {
 		 *
 		 * @param object $item The post item.
 		 */
-		$src = apply_filters( 'wpseo_xml_sitemap_img_src', $src, $this->item );
+		$src = apply_filters( 'wpseo_xml_sitemap_img_src', $src, $this->item ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WPSEO hook.
 
 		$encoding      = get_bloginfo( 'charset' );
 		$this->output .= "\t<image:image>\n";
@@ -193,7 +188,7 @@ class WPSEO_News_Sitemap_Images {
 	/**
 	 * Getting the featured image.
 	 *
-	 * @param integer $post_thumbnail_id Thumbnail ID.
+	 * @param int $post_thumbnail_id Thumbnail ID.
 	 *
 	 * @return void
 	 */
@@ -205,7 +200,7 @@ class WPSEO_News_Sitemap_Images {
 			return;
 		}
 
-		$image = array();
+		$image = [];
 
 		if ( ! empty( $attachment['title'] ) ) {
 			$image['title'] = $attachment['title'];
@@ -236,15 +231,15 @@ class WPSEO_News_Sitemap_Images {
 
 		// Check if we've found an attachment.
 		if ( is_null( $attachment ) ) {
-			return array();
+			return [];
 		}
 
 		// Return properties.
-		return array(
+		return [
 			'title'       => $attachment->post_title,
 			'alt'         => get_post_meta( $attachment->ID, '_wp_attachment_image_alt', true ),
 			'href'        => wp_get_attachment_url( $attachment->ID ),
 			'src'         => $attachment->guid,
-		);
+		];
 	}
 }

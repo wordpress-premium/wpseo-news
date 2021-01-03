@@ -2,9 +2,9 @@
     "name": "wordpress-premium/yoast-seo-news",
 	"description": "Google News plugin for the Yoast SEO plugin",
     "type": "wordpress-plugin",
-	"version": "12.3",
+	"version": "12.6",
 	"license": "GPL-3.0-or-later",
     "require": {
-        "composer/installers": "~1.0"
+        "composer/installers": "~1.6"
     }
 }

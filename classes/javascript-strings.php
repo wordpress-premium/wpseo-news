@@ -13,7 +13,7 @@ class WPSEO_News_Javascript_Strings {
 	/**
 	 * Strings to be made available to javascript.
 	 *
-	 * @var null|array
+	 * @var string[]|null
 	 */
 	private static $strings = null;
 
@@ -21,16 +21,16 @@ class WPSEO_News_Javascript_Strings {
 	 * Fills the strings with values.
 	 */
 	private static function fill() {
-		self::$strings = array(
+		self::$strings = [
 			'ajaxurl'      => admin_url( 'admin-ajax.php' ),
 			'choose_image' => __( 'Choose image.', 'wordpress-seo-news' ),
-		);
+		];
 	}
 
 	/**
 	 * Returns the array with strings.
 	 *
-	 * @return array
+	 * @return string[]
 	 */
 	public static function strings() {
 		if ( self::$strings === null ) {

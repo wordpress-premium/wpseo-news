@@ -34,7 +34,19 @@ class WPSEO_News_Excludable_Taxonomies {
 	public function get() {
 		$taxonomies = get_object_taxonomies( $this->post_type, 'objects' );
 
-		return array_filter( $taxonomies, array( $this, 'filter_taxonomies' ) );
+		return array_filter( $taxonomies, [ $this, 'filter_taxonomies' ] );
+	}
+
+	/**
+	 * Retrieves the terms that belong to the taxonomy.
+	 *
+	 * @return array
+	 */
+	public function get_terms() {
+		$taxonomies     = $this->get();
+		$taxonomy_terms = array_map( [ $this, 'get_terms_for_taxonomy' ], $taxonomies );
+
+		return array_filter( $taxonomy_terms );
 	}
 
 	/**
@@ -46,5 +58,32 @@ class WPSEO_News_Excludable_Taxonomies {
 	 */
 	protected function filter_taxonomies( WP_Taxonomy $taxonomy ) {
 		return $taxonomy->show_ui === true;
+	}
+
+	/**
+	 * Gets a list of terms for the given taxonomy, and returns them along with the taxonomy in an array.
+	 *
+	 * @param WP_Taxonomy $taxonomy The taxonomy to get the terms for.
+	 *
+	 * @return array|null An array containing both the taxonomy and its terms or null
+	 *                    if no terms are associated with the taxonomy.
+	 */
+	protected function get_terms_for_taxonomy( $taxonomy ) {
+		$terms = get_terms(
+			[
+				'taxonomy'   => $taxonomy->name,
+				'hide_empty' => false,
+				'show_ui'    => true,
+			]
+		);
+
+		if ( count( $terms ) === 0 ) {
+			return null;
+		}
+
+		return [
+			'taxonomy' => $taxonomy,
+			'terms'    => $terms,
+		];
 	}
 }
