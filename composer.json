@@ -1,6 +1,6 @@
 {
-  "name": "wordpress-premium/wordpress-seo-news",
-  "description": "Google News plugin for the Yoast SEO plugin",
+  "name": "wordpress-premium/wpseo-news",
+  "description": "Google News plugin for the Yoast SEO plugin.",
   "type": "wordpress-plugin",
   "version": "12.6",
   "time": "2020-08-20",
