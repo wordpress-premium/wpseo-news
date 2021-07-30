@@ -5,8 +5,6 @@
  * @package WPSEO_News
  */
 
-use Yoast\WP\SEO\Presenters\Abstract_Indexable_Presenter;
-
 /**
  * Represents the news extension for Yoast SEO.
  */
@@ -18,6 +16,20 @@ class WPSEO_News {
 	 * @var string
 	 */
 	const VERSION = WPSEO_NEWS_VERSION;
+
+	/**
+	 * Included post types.
+	 *
+	 * @var array
+	 */
+	protected static $included_post_types = [];
+
+	/**
+	 * Excluded terms.
+	 *
+	 * @var array
+	 */
+	protected static $excluded_terms = [];
 
 	/**
 	 * Initializes the plugin.
@@ -32,7 +44,8 @@ class WPSEO_News {
 		$this->set_hooks();
 
 		// Meta box.
-		new WPSEO_News_Meta_Box();
+		$meta_box = new WPSEO_News_Meta_Box( $this->get_version() );
+		$meta_box->register_hooks();
 
 		// Sitemap.
 		new WPSEO_News_Sitemap();
@@ -51,13 +64,25 @@ class WPSEO_News {
 	private function set_hooks() {
 		add_filter( 'plugin_action_links', [ $this, 'plugin_links' ], 10, 2 );
 		add_filter( 'wpseo_submenu_pages', [ $this, 'add_submenu_pages' ] );
-		add_action( 'admin_init', [ $this, 'init_helpscout_beacon' ] );
 		add_action( 'init', [ 'WPSEO_News_Option', 'register_option' ] );
+		add_action( 'init', [ 'WPSEO_News', 'read_options' ] );
 
 		// Enable Yoast usage tracking.
 		add_filter( 'wpseo_enable_tracking', '__return_true' );
+		add_filter( 'wpseo_helpscout_beacon_settings', [ $this, 'filter_helpscout_beacon' ] );
 
 		add_filter( 'wpseo_frontend_presenters', [ $this, 'add_frontend_presenter' ] );
+
+		$editor_reactification_alert = new WPSEO_News_Settings_Genre_Removal_Alert();
+		$editor_reactification_alert->register_hooks();
+	}
+
+	/**
+	 * Populates static properties from options so they don't have to be queried each time we need them.
+	 */
+	public static function read_options() {
+		self::$included_post_types = (array) WPSEO_Options::get( 'news_sitemap_include_post_types', [] );
+		self::$excluded_terms      = (array) WPSEO_Options::get( 'news_sitemap_exclude_terms', [] );
 	}
 
 	/**
@@ -105,7 +130,7 @@ class WPSEO_News {
 	 */
 	protected function check_dependencies( $wp_version ) {
 		// When WordPress function is too low.
-		if ( version_compare( $wp_version, '5.3', '<' ) ) {
+		if ( version_compare( $wp_version, '5.6', '<' ) ) {
 			add_action( 'all_admin_notices', [ $this, 'error_upgrade_wp' ] );
 
 			return false;
@@ -120,8 +145,8 @@ class WPSEO_News {
 			return false;
 		}
 
-		// At least 14.0, in which we implemented the Indexables.
-		if ( version_compare( $wordpress_seo_version, '14.0-RC0', '<' ) ) {
+		// At least 16.7, which includes the new Abstract_Indexable_Tag_Presenter.
+		if ( version_compare( $wordpress_seo_version, '16.7-RC0', '<' ) ) {
 			add_action( 'all_admin_notices', [ $this, 'error_upgrade_wpseo' ] );
 
 			return false;
@@ -193,21 +218,41 @@ class WPSEO_News {
 	}
 
 	/**
+	 * Retrieves a flatten version.
+	 *
+	 * @return string The flatten version.
+	 */
+	protected function get_version() {
+		$asset_manager = new WPSEO_Admin_Asset_Manager();
+		return $asset_manager->flatten_version( self::VERSION );
+	}
+
+	/**
 	 * Enqueue admin page JS.
 	 */
 	public function enqueue_admin_page() {
+		$version = $this->get_version();
+
+		$dependencies = [
+			'wp-data',
+			'wp-dom-ready',
+			'wp-element',
+			'wp-i18n',
+			'yoast-seo-editor-modules',
+		];
 
 		wp_enqueue_media(); // Enqueue files needed for upload functionality.
 
 		wp_enqueue_script(
 			'wpseo-news-admin-page',
-			plugins_url( 'assets/admin-page.min.js', WPSEO_NEWS_FILE ),
-			[ 'jquery' ],
+			plugins_url( 'js/dist/yoast-seo-news-settings-' . $version . '.js', WPSEO_NEWS_FILE ),
+			$dependencies,
 			self::VERSION,
 			true
 		);
 
-		wp_localize_script( 'wpseo-news-admin-page', 'wpseonews', WPSEO_News_Javascript_Strings::strings() );
+		$javascript_strings = new WPSEO_News_Javascript_Strings();
+		$javascript_strings->localize_script( 'wpseo-news-admin-page' );
 	}
 
 	/**
@@ -269,20 +314,17 @@ class WPSEO_News {
 	}
 
 	/**
-	 * Initializes the helpscout beacon.
+	 * Makes sure the News settings page has a HelpScout beacon.
+	 *
+	 * @param array $helpscout_settings The HelpScout settings.
+	 *
+	 * @return array The HelpScout settings with the News SEO beacon added.
 	 */
-	public function init_helpscout_beacon() {
-		if ( ! class_exists( 'WPSEO_HelpScout' ) ) {
-			return;
-		}
+	public function filter_helpscout_beacon( $helpscout_settings ) {
+		$helpscout_settings['pages_ids']['wpseo_news'] = '161a6b32-9360-4613-bd04-d8098b283a0f';
+		$helpscout_settings['products'][]              = WPSEO_Addon_Manager::NEWS_SLUG;
 
-		$helpscout = new WPSEO_HelpScout(
-			'161a6b32-9360-4613-bd04-d8098b283a0f',
-			[ 'wpseo_news' ],
-			[ WPSEO_Addon_Manager::NEWS_SLUG ]
-		);
-
-		$helpscout->register_hooks();
+		return $helpscout_settings;
 	}
 
 	/**
@@ -297,11 +339,9 @@ class WPSEO_News {
 		static $post_types;
 
 		if ( $post_types === null ) {
-			// Get supported post types.
-			$post_types          = [];
-			$included_post_types = (array) WPSEO_Options::get( 'news_sitemap_include_post_types', [] );
+			$post_types = [];
 			foreach ( get_post_types( [ 'public' => true ], 'names' ) as $post_type ) {
-				if ( array_key_exists( $post_type, $included_post_types ) && $included_post_types[ $post_type ] === 'on' ) {
+				if ( array_key_exists( $post_type, self::$included_post_types ) && self::$included_post_types[ $post_type ] === 'on' ) {
 					$post_types[] = $post_type;
 				}
 			}
@@ -316,23 +356,6 @@ class WPSEO_News {
 	}
 
 	/**
-	 * Listing the genres.
-	 *
-	 * @return array
-	 */
-	public static function list_genres() {
-		return [
-			'none'          => __( 'None', 'wordpress-seo-news' ),
-			'pressrelease'  => __( 'Press Release', 'wordpress-seo-news' ),
-			'satire'        => __( 'Satire', 'wordpress-seo-news' ),
-			'blog'          => __( 'Blog', 'wordpress-seo-news' ),
-			'oped'          => __( 'Op-Ed', 'wordpress-seo-news' ),
-			'opinion'       => __( 'Opinion', 'wordpress-seo-news' ),
-			'usergenerated' => __( 'User Generated', 'wordpress-seo-news' ),
-		];
-	}
-
-	/**
 	 * Determines whether the post is excluded in the news sitemap (and therefore schema) output.
 	 *
 	 * @param int $post_id The ID of the post to check for.
@@ -340,7 +363,8 @@ class WPSEO_News {
 	 * @return bool Whether or not the post is excluded.
 	 */
 	public static function is_excluded_through_sitemap( $post_id ) {
-		return WPSEO_Meta::get_value( 'newssitemap-exclude', $post_id ) === 'on';
+		// Check the specific WordPress SEO News no-index value.
+		return WPSEO_Meta::get_value( 'newssitemap-robots-index', $post_id ) === '1';
 	}
 
 	/**
@@ -352,11 +376,10 @@ class WPSEO_News {
 	 * @return bool True if the post is excluded.
 	 */
 	public static function is_excluded_through_terms( $post_id, $post_type ) {
-		$terms          = self::get_terms_for_post( $post_id, $post_type );
-		$excluded_terms = (array) WPSEO_Options::get( 'news_sitemap_exclude_terms', [] );
+		$terms = self::get_terms_for_post( $post_id, $post_type );
 		foreach ( $terms as $term ) {
 			$option_key = $term->taxonomy . '_' . $term->slug . '_for_' . $post_type;
-			if ( array_key_exists( $option_key, $excluded_terms ) && $excluded_terms[ $option_key ] === 'on' ) {
+			if ( array_key_exists( $option_key, self::$excluded_terms ) && self::$excluded_terms[ $option_key ] === 'on' ) {
 				return true;
 			}
 		}
@@ -387,5 +410,27 @@ class WPSEO_News {
 		}
 
 		return $terms;
+	}
+
+	/**
+	 * Listing the genres.
+	 *
+	 * @deprecated 12.7 News genres are deprecated.
+	 * @codeCoverageIgnore
+	 *
+	 * @return array
+	 */
+	public static function list_genres() {
+		_deprecated_function( __METHOD__, 'WPSEO News 12.7' );
+
+		return [
+			'none'          => __( 'None', 'wordpress-seo-news' ),
+			'pressrelease'  => __( 'Press Release', 'wordpress-seo-news' ),
+			'satire'        => __( 'Satire', 'wordpress-seo-news' ),
+			'blog'          => __( 'Blog', 'wordpress-seo-news' ),
+			'oped'          => __( 'Op-Ed', 'wordpress-seo-news' ),
+			'opinion'       => __( 'Opinion', 'wordpress-seo-news' ),
+			'usergenerated' => __( 'User Generated', 'wordpress-seo-news' ),
+		];
 	}
 }

@@ -6,8 +6,10 @@ $vendorDir = dirname(dirname(__FILE__));
 $baseDir = dirname($vendorDir);
 
 return array(
+    'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
     'WPSEO_News' => $baseDir . '/classes/wpseo-news.php',
     'WPSEO_News_Admin_Page' => $baseDir . '/classes/admin-page.php',
+    'WPSEO_News_Editor_Changes_Alert' => $baseDir . '/classes/integrations/editor-changes-alert.php',
     'WPSEO_News_Excludable_Taxonomies' => $baseDir . '/classes/excludable-taxonomies.php',
     'WPSEO_News_Googlebot_News_Presenter' => $baseDir . '/classes/googlebot-news-presenter.php',
     'WPSEO_News_Head' => $baseDir . '/classes/head.php',
@@ -16,10 +18,10 @@ return array(
     'WPSEO_News_Option' => $baseDir . '/classes/option.php',
     'WPSEO_News_Product' => $baseDir . '/classes/product.php',
     'WPSEO_News_Schema' => $baseDir . '/classes/schema.php',
+    'WPSEO_News_Settings_Genre_Removal_Alert' => $baseDir . '/classes/integrations/settings-genre-removal-alert.php',
     'WPSEO_News_Sitemap' => $baseDir . '/classes/sitemap.php',
     'WPSEO_News_Sitemap_Images' => $baseDir . '/classes/sitemap-images.php',
     'WPSEO_News_Sitemap_Item' => $baseDir . '/classes/sitemap-item.php',
-    'WPSEO_News_Sitemap_Timezone' => $baseDir . '/classes/sitemap-timezone.php',
     'WPSEO_News_Upgrade_Manager' => $baseDir . '/classes/upgrade-manager.php',
     'Yoast_I18n_WordPressOrg_v3' => $vendorDir . '/yoast/i18n-module/src/i18n-wordpressorg-v3.php',
     'Yoast_I18n_v3' => $vendorDir . '/yoast/i18n-module/src/i18n-v3.php',

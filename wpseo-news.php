@@ -6,11 +6,11 @@
  *
  * @wordpress-plugin
  * Plugin Name: Yoast SEO: News
- * Version:     12.6
+ * Version:     12.8
  * Plugin URI:  https://yoast.com/wordpress/plugins/news-seo/#utm_source=wpadmin&utm_medium=plugin&utm_campaign=wpseonewsplugin
  * Description: Google News plugin for the Yoast SEO plugin
  * Author:      Team Yoast
- * Author URI:  http://yoast.com/
+ * Author URI:  https://yoast.com/
  * Text Domain: wordpress-seo-news
  * Domain Path: /languages/
  * Depends:     Yoast SEO
@@ -37,7 +37,7 @@ if ( ! defined( 'WPSEO_NEWS_FILE' ) ) {
 	define( 'WPSEO_NEWS_FILE', __FILE__ );
 }
 
-define( 'WPSEO_NEWS_VERSION', '12.6' );
+define( 'WPSEO_NEWS_VERSION', '12.8' );
 
 if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	require __DIR__ . '/vendor/autoload.php';
@@ -91,16 +91,3 @@ function yoast_wpseo_news_deactivate() {
 	yoast_wpseo_news_clear_sitemap_cache();
 }
 
-/**
- * Activate the license automatically.
- *
- * @deprecated 10.1
- * @codeCoverageIgnore
- */
-function wpseo_news_activate_license() {
-	_deprecated_function( __FUNCTION__, '10.1' );
-}
-
-register_activation_hook( WPSEO_NEWS_FILE, 'yoast_wpseo_news_activate' );
-
-register_deactivation_hook( WPSEO_NEWS_FILE, 'yoast_wpseo_news_deactivate' );

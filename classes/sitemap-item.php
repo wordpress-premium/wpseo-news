@@ -66,30 +66,37 @@ class WPSEO_News_Sitemap_Item {
 	 * @return bool True if the item has to be skipped.
 	 */
 	private function skip_build_item() {
+		$skip_build_item = false;
+
 		if ( WPSEO_News::is_excluded_through_sitemap( $this->item->ID ) ) {
-			return true;
+			$skip_build_item = true;
 		}
 
 		$item_noindex = WPSEO_Meta::get_value( 'meta-robots-noindex', $this->item->ID );
 
 		if ( $item_noindex === '1' ) {
-			return true;
+			$skip_build_item = true;
 		}
 
 		if ( $item_noindex === '0' && WPSEO_Options::get( 'noindex-' . $this->item->post_type ) === true ) {
-			return true;
-		}
-
-		// Check the specific WordPress SEO News no-index value.
-		if ( WPSEO_Meta::get_value( 'newssitemap-robots-index', $this->item->ID ) === '1' ) {
-			return true;
+			$skip_build_item = true;
 		}
 
 		if ( WPSEO_News::is_excluded_through_terms( $this->item->ID, $this->item->post_type ) ) {
-			return true;
+			$skip_build_item = true;
 		}
 
-		return false;
+		/**
+		 * Filter: 'Yoast\WP\News\skip_build_item' - Allow override of decision to skip adding this item to the news sitemap.
+		 *
+		 * @param bool   $skip_build_item Whether this item should be built for the sitemap.
+		 * @param string $item_id         ID of the current item to be skipped or not.
+		 *
+		 * @since 12.8.0
+		 */
+		$skip_build_item = apply_filters( 'Yoast\WP\News\skip_build_item', $skip_build_item, $this->item->ID );
+
+		return is_bool( $skip_build_item ) && $skip_build_item;
 	}
 
 	/**
@@ -116,17 +123,12 @@ class WPSEO_News_Sitemap_Item {
 	private function build_news_tag() {
 
 		$title         = $this->get_item_title( $this->item );
-		$genre         = $this->get_item_genre();
 		$stock_tickers = $this->get_item_stock_tickers( $this->item->ID );
 
 		$this->output .= "\t<news:news>\n";
 
 		// Build the publication tag.
 		$this->build_publication_tag();
-
-		if ( ! empty( $genre ) ) {
-			$this->output .= "\t\t<news:genres><![CDATA[" . $genre . ']]></news:genres>' . "\n";
-		}
 
 		$this->output .= "\t\t<news:publication_date>" . $this->get_publication_date( $this->item ) . '</news:publication_date>' . "\n";
 		$this->output .= "\t\t<news:title><![CDATA[" . $title . ']]></news:title>' . "\n";
@@ -165,27 +167,6 @@ class WPSEO_News_Sitemap_Item {
 		}
 
 		return $item->post_title;
-	}
-
-	/**
-	 * Getting the genre for given $item_id.
-	 *
-	 * @return string
-	 */
-	private function get_item_genre() {
-		$genre = WPSEO_Meta::get_value( 'newssitemap-genre', $this->item->ID );
-		if ( is_array( $genre ) ) {
-			$genre = implode( ',', $genre );
-		}
-
-		$default_genre = WPSEO_Options::get( 'news_sitemap_default_genre' );
-		if ( $genre === '' && $default_genre ) {
-			$genre = is_array( $default_genre ) ? implode( ',', $default_genre ) : $default_genre;
-		}
-
-		$genre = trim( preg_replace( '/^none,?/', '', $genre ) );
-
-		return $genre;
 	}
 
 	/**

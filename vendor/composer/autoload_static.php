@@ -4,11 +4,13 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit3318e879b59d719b6155915dc11526b5
+class ComposerStaticInit283fede5332e36676c2d741242c7fc65
 {
     public static $classMap = array (
+        'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'WPSEO_News' => __DIR__ . '/../..' . '/classes/wpseo-news.php',
         'WPSEO_News_Admin_Page' => __DIR__ . '/../..' . '/classes/admin-page.php',
+        'WPSEO_News_Editor_Changes_Alert' => __DIR__ . '/../..' . '/classes/integrations/editor-changes-alert.php',
         'WPSEO_News_Excludable_Taxonomies' => __DIR__ . '/../..' . '/classes/excludable-taxonomies.php',
         'WPSEO_News_Googlebot_News_Presenter' => __DIR__ . '/../..' . '/classes/googlebot-news-presenter.php',
         'WPSEO_News_Head' => __DIR__ . '/../..' . '/classes/head.php',
@@ -17,10 +19,10 @@ class ComposerStaticInit3318e879b59d719b6155915dc11526b5
         'WPSEO_News_Option' => __DIR__ . '/../..' . '/classes/option.php',
         'WPSEO_News_Product' => __DIR__ . '/../..' . '/classes/product.php',
         'WPSEO_News_Schema' => __DIR__ . '/../..' . '/classes/schema.php',
+        'WPSEO_News_Settings_Genre_Removal_Alert' => __DIR__ . '/../..' . '/classes/integrations/settings-genre-removal-alert.php',
         'WPSEO_News_Sitemap' => __DIR__ . '/../..' . '/classes/sitemap.php',
         'WPSEO_News_Sitemap_Images' => __DIR__ . '/../..' . '/classes/sitemap-images.php',
         'WPSEO_News_Sitemap_Item' => __DIR__ . '/../..' . '/classes/sitemap-item.php',
-        'WPSEO_News_Sitemap_Timezone' => __DIR__ . '/../..' . '/classes/sitemap-timezone.php',
         'WPSEO_News_Upgrade_Manager' => __DIR__ . '/../..' . '/classes/upgrade-manager.php',
         'Yoast_I18n_WordPressOrg_v3' => __DIR__ . '/..' . '/yoast/i18n-module/src/i18n-wordpressorg-v3.php',
         'Yoast_I18n_v3' => __DIR__ . '/..' . '/yoast/i18n-module/src/i18n-v3.php',
@@ -29,7 +31,7 @@ class ComposerStaticInit3318e879b59d719b6155915dc11526b5
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->classMap = ComposerStaticInit3318e879b59d719b6155915dc11526b5::$classMap;
+            $loader->classMap = ComposerStaticInit283fede5332e36676c2d741242c7fc65::$classMap;
 
         }, null, ClassLoader::class);
     }
